@@ -15,13 +15,13 @@ end
 module Dtm
   class Dtm
     def self.instance(data_store)
-      wttcl = 'C:\\Program Files\\Microsoft Driver Test Manager\\Studio\\wttcl.exe'
+      wttcl = 'C:\Program Files\Microsoft Driver Test Manager\Studio\wttcl.exe'
       return Dtm.new(wttcl, data_store) if File.exist?(wttcl)
 
-      wttcl = 'C:\\Program Files (x86)\\Microsoft Driver Test Manager\\Studio\\wttcl.exe'
+      wttcl = 'C:\Program Files (x86)\Microsoft Driver Test Manager\Studio\wttcl.exe'
       return Dtm.new(wttcl, data_store) if File.exist?(wttcl)
 
-      raise
+      raise 'ERROR: fail to find wttcl.exe'
     end
 
     def initialize(wttcl, data_store)
@@ -37,15 +37,13 @@ module Dtm
       Schedule.new(self, schedule_id)
     end
 
-    def machines(machine_pool)
-      self.set_machine_status(:machine_pool => machine_pool) do |stdout|
-        stdout.split("\n").collect {|line| line.scan(/\[\w+\]/) if line.match(/Machine \[\w+\] \(ID \d+\) is in \[\w+\] state./)}.compact
-      end
-    end
+    def machines(machine_pool, params = {})
+      params[:machine_pool] = machine_pool
 
-    def availabe_machines(params)
-      self.method_missing(:setmachinestatus, params) do |stdout|
-        stdout.split("\n").collect{|line| line.scan(/\[\w+\]/) if line.match(/Machine \[\w+\] \(ID \d+\) is in \[\w+\] state./)}.compact
+      self.set_machine_status(params) do |stdout|
+        raise stdout if stdout.match(/^ERROR:/)
+
+        stdout.split("\n").collect {|line| line.scan(/\[\w+\]/) if line.match(/Machine \[\w+\] \(ID \d+\) is in \[\w+\] state./)}.compact
       end
     end
 
@@ -66,17 +64,20 @@ module Dtm
       params[:type] ||= "Automated"
 
       self.method_missing(:add_job, params) do |stdout|
-        return self.job(stdout.slice(/\d+/)) if stdout.match(/Job Created Successfully with ID=\d+/)
-        raise
+        raise stdout unless stdout.match(/Job Created Successfully with ID=\d+/)
+
+        self.job(stdout.slice(/\d+/))
       end
     end
 
     #FIXME design choice, put stdout processing here or leave it to job?
     def schedule_job(params)
       self.method_missing(:schedule_job, params) do |stdout|
+        raise stdout if stdout.match(/^\[?ERROR/)
+
         stdout.split("\n").select {|line| line.match(/Schedule Created with Id \d+/)}
-                          .collect {|line| line.slice(/\d+/)}
-                          .collect {|schedule_id| self.schedule(schedule_id)}
+                          .map {|line| line.slice(/\d+/)}
+                          .map {|schedule_id| self.schedule(schedule_id)}
       end
     end
 
