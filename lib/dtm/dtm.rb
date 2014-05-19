@@ -15,13 +15,7 @@ end
 module Dtm
   class Dtm
     def self.instance(data_store)
-      wttcl = 'C:\Program Files\Microsoft Driver Test Manager\Studio\wttcl.exe'
-      return Dtm.new(wttcl, data_store) if File.exist?(wttcl)
-
-      wttcl = 'C:\Program Files (x86)\Microsoft Driver Test Manager\Studio\wttcl.exe'
-      return Dtm.new(wttcl, data_store) if File.exist?(wttcl)
-
-      raise 'ERROR: fail to find wttcl.exe'
+      Dtm.new('wttcl.exe', data_store)
     end
 
     def initialize(wttcl, data_store)
