@@ -1,6 +1,6 @@
 # Dtm
 
-TODO: Write a gem description
+dtm.exe command wrapper in ruby
 
 ## Installation
 
